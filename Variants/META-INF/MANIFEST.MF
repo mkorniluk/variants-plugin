@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Variants
+Bundle-SymbolicName: Variants; singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: variants.Activator
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.core.resources;bundle-version="3.8.1",
+ org.eclipse.jdt.core;bundle-version="3.8.3"
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7

@@ -1,9 +1,8 @@
 package variants.actions;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,26 +66,17 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
     public void run(IAction action) {
     }
 
-    public Variant readCurrentVariant() {
-        IProject project = getCurrentSelectedProject();
-        if (project == null)
-            return null;
-
-        IFile ifile = project.getFile("variant");
-        try {
-            DataInputStream stream = new DataInputStream(ifile.getContents());
-            String variantName = stream.readUTF();
-            stream.close();
-            for (Variant variant : properties.variants) {
-                if (variant.name.equals(variantName))
-                    return variant;
-            }
-            return null;
-        } catch (CoreException e) {
-        } catch (IOException e) {
-        }
-        return null;
-    }
+    /*
+     * public Variant readCurrentVariant() { IProject project =
+     * getCurrentSelectedProject(); if (project == null) return null;
+     * 
+     * IFile ifile = project.getFile("variant"); try { DataInputStream stream =
+     * new DataInputStream(ifile.getContents()); String variantName =
+     * stream.readUTF(); stream.close(); for (Variant variant :
+     * properties.variants) { if (variant.name.equals(variantName)) return
+     * variant; } return null; } catch (CoreException e) { } catch (IOException
+     * e) { } return null; }
+     */
 
     private void switchVariant(Variant variant) {
         IProject project = getCurrentSelectedProject();
@@ -94,35 +84,38 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
             return;
 
         currentVariant = variant;
-        IFile file = project.getFile("variant");
-        try {
-            file.delete(true, null);
-        } catch (CoreException e1) {
-            e1.printStackTrace();
-        }
-        InputStream source = new ByteArrayInputStream(variant.name.getBytes());
-        try {
-            file.create(source, false, null);
-            source.close();
-        } catch (CoreException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        /*
+         * IFile file = project.getFile("variant"); try { file.delete(true,
+         * null); } catch (CoreException e1) { e1.printStackTrace(); }
+         * InputStream source = new
+         * ByteArrayInputStream(variant.name.getBytes()); try {
+         * file.create(source, false, null); source.close(); } catch
+         * (CoreException e) { e.printStackTrace(); } catch (IOException e) {
+         * e.printStackTrace(); }
+         */
         try {
             project.refreshLocal(IResource.DEPTH_INFINITE, null);
         } catch (CoreException e) {
             e.printStackTrace();
         }
 
-        clearFolders(project);
+        try {
+            clearFolders(project);
+        } catch (CoreException e1) {
+            e1.printStackTrace();
+        }
+
+        try {
+            project.refreshLocal(IResource.DEPTH_INFINITE, null);
+        } catch (CoreException e) {
+            e.printStackTrace();
+        }
 
         linkVariant(project);
 
         try {
             project.refreshLocal(IResource.DEPTH_INFINITE, null);
         } catch (CoreException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -157,50 +150,66 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
         }
 
         IFolder folder = project.getFolder("variants/" + subfolder);
-        if (folder.exists()) {
-            try {
-                IResource[] members = folder.members();
-                for (IResource member : members) {
-                    if (member instanceof IFile) {
-                        IFile fileLink = project.getFile(destination + "/" + member.getName());
-                        Runtime.getRuntime().exec(
-                                "fsutil hardlink create \"" + fileLink.getLocation().toString() + "\" \""
-                                        + member.getLocation().toString() + "\"");
-                        // fileLink.copy(member.getLocation(),
-                        // IResource.REPLACE,
-                        // null);
+        try {
+            IResource[] members = folder.members();
+            for (IResource member : members) {
+                if (member instanceof IFile) {
+                    IFile fileLink = project.getFile(destination + "/" + member.getName());
+                    if (fileLink.exists()) {
+                        System.out.println("file " + fileLink.getLocation().toString() + " exists");
+                    } else {
+                        Process exec;
+                        if (System.getProperty("os.name").startsWith("Windows")) {
+                            exec = Runtime.getRuntime().exec(
+                                    "fsutil hardlink create \"" + fileLink.getLocation().toString() + "\" \""
+                                            + member.getLocation().toString() + "\"");
+                        } else {
+                            exec = Runtime.getRuntime().exec(
+                                    "ln \"" + member.getLocation().toString() + "\" \""
+                                            + fileLink.getLocation().toString() + "\"");
+                        }
+                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(exec.getInputStream()));
+                        String line;
+                        while ((line = bufferedReader.readLine()) != null) {
+                            System.out.println(line);
+                        }
+                        BufferedReader bufferedReader2 = new BufferedReader(
+                                new InputStreamReader(exec.getErrorStream()));
+                        String line2;
+                        while ((line2 = bufferedReader2.readLine()) != null) {
+                            System.out.println(line2);
+                        }
                     }
-                    if (member instanceof IFolder) {
-                        linkVariant(project, destination + "/" + member.getName(), subfolder + "/" + member.getName());
-                    }
+                    // fileLink.copy(member.getLocation(),
+                    // IResource.REPLACE,
+                    // null);
                 }
-            } catch (CoreException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+                if (member instanceof IFolder) {
+                    linkVariant(project, destination + "/" + member.getName(), subfolder + "/" + member.getName());
+                }
             }
+        } catch (CoreException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    private void clearFolders(IProject project) {
+    private void clearFolders(IProject project) throws CoreException {
         IFolder srcFolder = project.getFolder("src");
-        try {
+        if (srcFolder.exists()) {
             IResource[] members = srcFolder.members();
             for (IResource member : members) {
                 member.delete(false, null);
             }
-        } catch (CoreException e1) {
-            e1.printStackTrace();
         }
 
         IFolder resFolder = project.getFolder("res");
-        try {
+        if (resFolder.exists()) {
             IResource[] members = resFolder.members();
             for (IResource member : members) {
                 member.delete(false, null);
             }
-        } catch (CoreException e1) {
-            e1.printStackTrace();
         }
     }
 
@@ -248,7 +257,6 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
 
                         @Override
                         public void widgetSelected(SelectionEvent arg0) {
-                            switchVariant(variant);
                             for (MenuItem itemToUncheck : variantItems) {
                                 if (itemToUncheck != variantItem)
                                     itemToUncheck.setSelection(false);
@@ -290,8 +298,9 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
             properties.read(file);
         }
 
-        if (currentVariant == null)
-            currentVariant = readCurrentVariant();
+        /*
+         * if (currentVariant == null) currentVariant = readCurrentVariant();
+         */
 
         /*
          * } else { try { IFolder folder = project.getFolder("variants");

@@ -107,16 +107,15 @@ public class VariantsProperties {
                 JSONObject variantJSON = json.getJSONObject(variantName);
                 Variant v = new Variant(variantName);
                 JSONArray src = variantJSON.getJSONArray("src");
-                if (src != null) {
-                    for (int i = 0; i < src.length(); i++) {
-                        v.srcFolders.add(src.getString(i));
-                    }
+                for (int i = 0; i < src.length(); i++) {
+                    v.srcFolders.add(src.getString(i));
                 }
-                JSONArray res = variantJSON.getJSONArray("res");
-                if (res != null) {
+                try {
+                    JSONArray res = variantJSON.getJSONArray("res");
                     for (int i = 0; i < res.length(); i++) {
                         v.resFolders.add(res.getString(i));
                     }
+                } catch (Exception e) {
                 }
                 variants.add(v);
             }

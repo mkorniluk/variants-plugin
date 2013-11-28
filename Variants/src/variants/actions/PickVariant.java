@@ -28,8 +28,10 @@ import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IObjectActionDelegate;
 import org.eclipse.ui.ISelectionService;
 import org.eclipse.ui.IStartup;
+import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 import org.eclipse.ui.PlatformUI;
@@ -45,11 +47,12 @@ import variants.actions.VariantsProperties.Variant;
  * 
  * @see IWorkbenchWindowActionDelegate
  */
-public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
+public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup ,IObjectActionDelegate{
     private IWorkbenchWindow window;
     List<MenuItem> variantItems = new ArrayList<MenuItem>();
     VariantsProperties properties;
     Variant currentVariant;
+    private Object prevProject;
 
     /**
      * The constructor.
@@ -64,6 +67,7 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
      * @see IWorkbenchWindowActionDelegate#run
      */
     public void run(IAction action) {
+        updateVariants();
     }
 
     /*
@@ -136,7 +140,6 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
                 }
             });
         } catch (InvocationTargetException | InterruptedException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -215,7 +218,12 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
 
     public static IProject getCurrentSelectedProject() {
         IProject project = null;
-        ISelectionService selectionService = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getSelectionService();
+        ISelectionService selectionService;
+        try {
+            selectionService = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getSelectionService();
+        } catch (Exception e) {
+            return null;
+        }
 
         ISelection selection = selectionService.getSelection();
 
@@ -236,9 +244,10 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
     }
 
     public void updateVariantsMenu() {
-        MenuManager menuManager = ((WorkbenchWindow) window).getMenuManager();
+        final MenuManager menuManager = ((WorkbenchWindow) window).getMenuManager();
 
-        Menu menu = menuManager.getMenu();
+        final Menu menu = menuManager.getMenu();
+
         MenuItem[] items = menu.getItems();
         for (MenuItem item : items) {
             if (item.getText().equals("Variants")) {
@@ -274,6 +283,7 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
                 break;
             }
         }
+
     }
 
     /**
@@ -291,6 +301,10 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
         IProject project = getCurrentSelectedProject();
         if (project == null)
             return;
+
+        if (project.equals(prevProject))
+            return;
+        prevProject = project;
 
         IFile file = project.getFile("variants.properties");
         if (file.exists()) {
@@ -336,5 +350,11 @@ public class PickVariant implements IWorkbenchWindowActionDelegate, IStartup {
 
     @Override
     public void earlyStartup() {
+        updateVariants();
+    }
+
+    @Override
+    public void setActivePart(IAction arg0, IWorkbenchPart arg1) {
+        
     }
 }

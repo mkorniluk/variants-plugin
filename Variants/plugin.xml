@@ -4,6 +4,13 @@
 <extension point="org.eclipse.ui.startup">
    <startup class="variants.actions.PickVariant"/>
 </extension>
+ <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            class="variants.DefineCommands"
+            locationURI="menu:org.eclipse.ui.main.menu">
+      </menuContribution>
+   </extension>
    <extension
          point="org.eclipse.ui.actionSets">
       <actionSet
@@ -16,17 +23,40 @@
             <separator
                   name="sampleGroup">
             </separator>
+			<visibleWhen checkEnabled="false">
+				<with variable="selection">
+					 <instanceof
+	                           value="org.eclipse.core.resources.IProject"/>
+				</with>
+			</visibleWhen>
          </menu>
+         
          <action
                label="Select Project"
                class="variants.actions.PickVariant"
                tooltip="Pick a variant to work with"
                menubarPath="variantsMenu/sampleGroup"
-               toolbarPath="sampleGroup"
                enabled="false"
                id="variants.actions.PickVariant">
          </action>
       </actionSet>
    </extension>
-
+<extension point="org.eclipse.ui.popupMenus"> 
+<objectContribution 
+      id="org.eclipse.ui.articles.action.contribution.popup.object"
+   objectClass="org.eclipse.core.resources.IFile"
+   nameFilter="*.java">
+   <filter
+         name="projectNature"
+         value="org.eclipse.jdt.core.javanature">
+      </filter>
+      <action
+         id="org.eclipse.ui.articles.action.contribution.object.action1" 
+         label="Object Action 1"
+         icon="icons/sample.gif"
+         menubarPath="additions" 
+      class="org.eclipse.ui.articles.action.contribution.ObjectAction1Delegate"> 
+      </action> 
+   </objectContribution> 
+</extension>
 </plugin>
